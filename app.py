@@ -45,7 +45,7 @@ def verify_date_format(date_str: str) -> bool:
         return False
     
 # Rotas de Aluno
-@app.post('/alunos', tags=[aluno_tag], response_model=aluno.Aluno, status_code=HTTPStatus.CREATED)
+@app.post('/alunos', tags=[aluno_tag], responses={"200": aluno.Aluno})
 def create_aluno(aluno_data: aluno.NovoAluno):
     """
     Cadastra um novo aluno.
@@ -73,31 +73,36 @@ def create_aluno(aluno_data: aluno.NovoAluno):
     session.commit()
     return new_aluno
 
-@app.delete('/alunos/{id_aluno}', tags=[aluno_tag], status_code=HTTPStatus.NO_CONTENT)
+@app.delete('/alunos/{id_aluno}', tags=[aluno_tag], responses={"200": aluno.AlunoDelSchema})
 def delete_aluno(id_aluno: int):
     """
     Remove um aluno pelo ID.
     """
     session = LocalSession()
-    aluno = session.get(aluno_model.AlunoDB, id_aluno)
+
+    query_aluno = select(aluno_model.AlunoDB).where(aluno_model.AlunoDB.id_aluno == id_aluno)
+    aluno = session.execute(query_aluno).scalar_one_or_none()
     if not aluno:
-        return {"message": "Aluno não encontrado"}, HTTPStatus.NOT_FOUND
+        abort(HTTPStatus.NOT_FOUND, description="Nenhum aluno encontrado para o ID fornecido.")
+    
     session.delete(aluno)
     session.commit()
-    return "", HTTPStatus.NO_CONTENT
+    return "Aluno excluido com sucesso!"
 
-@app.get('/alunos', tags=[aluno_tag], response_model=list[aluno.Aluno])
+@app.get('/alunos', tags=[aluno_tag], responses={"200" : aluno.ListagemAlunos})
 def list_alunos():
     """
     Lista todos os alunos cadastrados.
     """
     session = LocalSession()
-    alunos = session.execute(select(aluno_model.AlunoDB)).scalars().all()
+
+    query_aluno = select(aluno_model.AlunoDB).order_by(aluno_model.AlunoDB.data_cadastro.desc())
+    alunos = session.execute(query_aluno).scalars().all()
     return alunos
 
 #Rota de atividade
-@app.get("/atividades", response_model=list[atividade.AtividadeHistorico], tags=[atividade_tag])
-async def get_atividades_aluno(id_aluno: int):
+@app.get("/atividades/{id_aluno}", tags=[atividade_tag], responses={"200": atividade.ListagemAtividades})
+def get_atividades_aluno(id_aluno: int):
     """
     Retorna o histórico de todas as atividades de um aluno.
     """

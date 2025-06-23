@@ -15,5 +15,15 @@ class Aluno(BaseModel):
     data_nascimento: date
     data_cadastro: datetime
 
+class AlunoDelSchema(BaseModel):
+    """Schema para deletar um aluno.
+    """
+    message: str
+
+class ListagemAlunos(BaseModel):
+    """Schema para listar alunos.
+    """
+    alunos: list[Aluno]
+    
     class Config:
         from_attributes = True

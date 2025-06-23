@@ -20,5 +20,10 @@ class AtividadeHistorico(BaseModel):
     duracao: int
     status: str
 
+class ListagemAtividades(BaseModel):
+    """Schema para listar atividades.
+    """
+    alunos: list[AtividadeHistorico]
+
     class Config:
         from_attributes = True
