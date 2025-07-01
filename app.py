@@ -39,7 +39,7 @@ atividade_tag = Tag(name="Atividade", description="Listagem de atividades")
 
 def verify_date_format(date_str: str) -> bool:
     try:
-        datetime.strptime(date_str, "%Y-%m-%d")
+        datetime.strptime(date_str, "%d/%m/%y")
         return True
     except ValueError:
         return False
