@@ -1,28 +1,15 @@
-from flask import abort
+from flask import abort, redirect
 from flask_openapi3.openapi import OpenAPI
 from flask_openapi3.models.info import Info
 from flask_openapi3.models.tag import Tag
+from flask_cors import CORS
 from http import HTTPStatus
-from schemas import aluno, atividade
+from schemas import aluno as alunoSchema
+from schemas import atividade as atividadeSchema
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
-from model import aluno as aluno_model
-from model import atividade as atividade_model
+from model import models, Session
 from datetime import datetime
-import os
-
-db_path = "database/"
-# Verifica se o diretorio não existe
-if not os.path.exists(db_path):
-   # então cria o diretorio
-   os.makedirs(db_path)
-
-# url de acesso ao banco (essa é uma url de acesso ao sqlite local)
-db_url = 'sqlite:///%s/db.sqlite3' % db_path
-
-# --- Database configuration ---
-engine = create_engine(db_url, connect_args={"check_same_thread": False})
-LocalSession = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
 app = OpenAPI(
@@ -33,55 +20,64 @@ app = OpenAPI(
         description="API para cadastro de alunos e atividades",
     )
 )
+CORS(app)
 
 aluno_tag = Tag(name="Aluno", description="Adição, remoção e listagem de alunos")
 atividade_tag = Tag(name="Atividade", description="Listagem de atividades")
+home_tag = Tag(name="Documentação", description="Seleção de documentação")
+
+@app.get('/', tags=[home_tag])
+def home():
+    """Redireciona para /openapi, tela que permite a escolha do estilo de documentação.
+    """
+    return redirect('/openapi')
 
 def verify_date_format(date_str: str) -> bool:
     try:
-        datetime.strptime(date_str, "%d/%m/%y")
+        datetime.strptime(date_str, "%Y-%m-%d")
         return True
     except ValueError:
         return False
     
 # Rotas de Aluno
-@app.post('/alunos', tags=[aluno_tag], responses={"200": aluno.Aluno})
-def create_aluno(aluno_data: aluno.NovoAluno):
+@app.post('/alunos', tags=[aluno_tag], responses={"200": alunoSchema.Aluno})
+def create_aluno(form: alunoSchema.NovoAluno):
     """
     Cadastra um novo aluno.
     """
-    session = LocalSession()
+    session = Session()
 
-    query_aluno = select(aluno_model.AlunoDB).where(aluno_model.AlunoDB.email == aluno_data.email)
+    query_aluno = select(models.AlunoDB).where(models.AlunoDB.email == form.email)
     db_aluno = session.execute(query_aluno).scalar_one_or_none()
     if db_aluno:
             abort(HTTPStatus.BAD_REQUEST, description="Email já cadastrado.")
     
-    if (aluno_data.data_nascimento > datetime.now().date() or 
-        aluno_data.data_nascimento < datetime(1900, 1, 1).date() or 
-        verify_date_format(str(aluno_data.data_nascimento)) is False):
+    if (form.data_nascimento > datetime.now().date() or 
+        form.data_nascimento < datetime(1900, 1, 1).date() or 
+        verify_date_format(str(form.data_nascimento)) is False):
             abort(HTTPStatus.UNPROCESSABLE_ENTITY, description="Data de nascimento inválida.")
     
-    new_aluno = aluno_model.AlunoDB(
-        nome=aluno_data.nome,
-        email=aluno_data.email,
-        data_nascimento=aluno_data.data_nascimento,
+    new_aluno = models.AlunoDB(
+        nome=form.nome,
+        email=form.email,
+        data_nascimento=form.data_nascimento,
         data_cadastro=datetime.now()
     )
     
     session.add(new_aluno)
     session.commit()
-    return new_aluno
+    return alunoSchema.apresentar_aluno(new_aluno), 200
 
-@app.delete('/alunos/{id_aluno}', tags=[aluno_tag], responses={"200": aluno.AlunoDelSchema})
-def delete_aluno(id_aluno: int):
+@app.delete('/alunos', tags=[aluno_tag], responses={"200": alunoSchema.AlunoDelSchema})
+def delete_aluno(query: alunoSchema.AlunoBuscaSchema):
     """
     Remove um aluno pelo ID.
     """
-    session = LocalSession()
+    session = Session()
 
-    query_aluno = select(aluno_model.AlunoDB).where(aluno_model.AlunoDB.id_aluno == id_aluno)
+    query_aluno = select(models.AlunoDB).where(models.AlunoDB.id_aluno == query.id_aluno)
     aluno = session.execute(query_aluno).scalar_one_or_none()
+
     if not aluno:
         abort(HTTPStatus.NOT_FOUND, description="Nenhum aluno encontrado para o ID fornecido.")
     
@@ -89,32 +85,59 @@ def delete_aluno(id_aluno: int):
     session.commit()
     return "Aluno excluido com sucesso!"
 
-@app.get('/alunos', tags=[aluno_tag], responses={"200" : aluno.ListagemAlunos})
+@app.get('/alunos', tags=[aluno_tag], responses={"200" : alunoSchema.ListagemAlunos})
 def list_alunos():
     """
     Lista todos os alunos cadastrados.
     """
-    session = LocalSession()
+    session = Session()
 
-    query_aluno = select(aluno_model.AlunoDB).order_by(aluno_model.AlunoDB.data_cadastro.desc())
-    alunos = session.execute(query_aluno).scalars().all()
-    return alunos
+    alunos = session.query(models.AlunoDB).all()
+    if not alunos:
+        return {"alunos": []}, 200
+    return alunoSchema.apresentar_aluno_listagem(alunos), 200
 
 #Rota de atividade
-@app.get("/atividades/{id_aluno}", tags=[atividade_tag], responses={"200": atividade.ListagemAtividades})
-def get_atividades_aluno(id_aluno: int):
+@app.post("/atividades", tags=[atividade_tag], responses={"200": atividadeSchema.Atividade})
+def create_atividade(query: alunoSchema.AlunoBuscaSchema):
     """
-    Retorna o histórico de todas as atividades de um aluno.
+    Inicia uma nova atividade para um aluno através de seu ID.
     """
-    session = LocalSession()
+    session = Session()
 
-    query_aluno = select(aluno_model.AlunoDB).filter(aluno_model.AlunoDB.id_aluno == id_aluno)
+    query_aluno = select(models.AlunoDB).filter(models.AlunoDB.id_aluno == query.id_aluno)
+    aluno = session.execute(query_aluno).scalar_one_or_none()
+
+    if not aluno:
+        abort(HTTPStatus.NOT_FOUND, description="Nenhum aluno encontrado para o ID fornecido.")
+    
+    new_atividade = models.AtividadeDB(
+        id_aluno=query.id_aluno,
+        data_inicio=datetime.now().date(),
+        hora_inicio=datetime.now().time(),
+        duracao=0, # Duração inicial é 0, será atualizada posteriormente
+        status="iniciada"  # Status inicial da atividade
+    )
+    
+    session.add(new_atividade)
+    session.commit()
+    
+    return atividadeSchema.apresentar_atividade(new_atividade), 200
+
+@app.get("/atividades", tags=[atividade_tag], responses={"200": atividadeSchema.ListagemAtividades})
+def get_atividades_aluno(query: alunoSchema.AlunoBuscaSchema):
+    """
+    Retorna o histórico de todas as atividades de um aluno através de seu ID.
+    """
+    session = Session()
+
+    query_aluno = select(models.AlunoDB).filter(models.AlunoDB.id_aluno == query.id_aluno)
     aluno = session.execute(query_aluno).scalar_one_or_none()
 
     if not aluno:
         abort(HTTPStatus.NOT_FOUND, description="Nenhum aluno encontrado para o ID fornecido.")
 
-    query_atividades = select(atividade_model.AtividadeDB).filter(atividade_model.AtividadeDB.id_aluno == id_aluno).order_by(atividade_model.AtividadeDB.data_inicio.desc(), atividade_model.AtividadeDB.hora_inicio.desc())
+    query_atividades = select(models.AtividadeDB).filter(models.AtividadeDB.id_aluno == query.id_aluno)
     atividades = session.execute(query_atividades).scalars().all()
 
     if not atividades:
@@ -123,15 +146,16 @@ def get_atividades_aluno(id_aluno: int):
     response_atividades = []
     for atividade in atividades:
         response_atividades.append(
-            atividade.AtividadeHistorico(
+            atividadeSchema.Atividade(
                 id_atividade=atividade.id_atividade,
+                id_aluno=atividade.id_aluno,
                 data_inicio=atividade.data_inicio,
                 hora_inicio=atividade.hora_inicio,
                 duracao=atividade.duracao,
                 status=atividade.status
             )
         )
-    return response_atividades
+    return atividadeSchema.apresentar_atividade_listagem(response_atividades), 200
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080, debug=True)
