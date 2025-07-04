@@ -83,7 +83,7 @@ def delete_aluno(query: alunoSchema.AlunoBuscaSchema):
     
     session.delete(aluno)
     session.commit()
-    return "Aluno excluido com sucesso!"
+    return {"message": "Aluno removido com sucesso.", "id_aluno": query.id_aluno}
 
 @app.get('/alunos', tags=[aluno_tag], responses={"200" : alunoSchema.ListagemAlunos})
 def list_alunos():
@@ -141,7 +141,7 @@ def get_atividades_aluno(query: alunoSchema.AlunoBuscaSchema):
     atividades = session.execute(query_atividades).scalars().all()
 
     if not atividades:
-        abort(HTTPStatus.NOT_FOUND, detail="Nenhuma atividade encontrada para o aluno.")
+        abort(HTTPStatus.NOT_FOUND, description="Nenhuma atividade encontrada para o aluno.")
 
     response_atividades = []
     for atividade in atividades:
