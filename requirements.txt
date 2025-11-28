@@ -4,3 +4,4 @@ flask-cors
 sqlalchemy
 sqlalchemy-utils
 pydantic
+requests

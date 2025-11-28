@@ -13,6 +13,11 @@ class AlunoDB(Base):
     data_nascimento = mapped_column(Date)
     data_cadastro = mapped_column(DateTime, default=datetime.now)
 
+    cep = mapped_column(String, nullable=True, index=True)
+    estado = mapped_column(String, nullable=True)
+    cidade = mapped_column(String, nullable=True)
+    rua = mapped_column(String, nullable=True)
+
     atividades = relationship("AtividadeDB", back_populates="aluno")
 
 class AtividadeDB(Base):

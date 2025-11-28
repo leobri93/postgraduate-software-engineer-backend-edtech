@@ -10,6 +10,7 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 from model import models, Session
 from datetime import datetime
+import requests
 
 
 app = OpenAPI(
@@ -47,6 +48,27 @@ def create_aluno(form: alunoSchema.NovoAluno):
     """
     session = Session()
 
+    cep_raw = form.cep
+    cep_digits = ''.join(filter(str.isdigit, str(cep_raw)))
+    if len(cep_digits) != 8:
+        abort(HTTPStatus.UNPROCESSABLE_ENTITY, description="CEP inválido. Deve conter 8 dígitos.")
+
+    # Consulta a BrasilAPI para obter estado, cidade e rua
+    estado = None
+    cidade = None
+    rua = None
+    try:
+        resp = requests.get(f"https://brasilapi.com.br/api/cep/v2/{cep_digits}", timeout=5)
+        if resp.status_code == 200:
+            data = resp.json()
+            estado = data.get('state')
+            cidade = data.get('city')
+            rua = data.get('street') or data.get('logradouro')
+    except requests.RequestException:
+        estado = ""
+        cidade = ""
+        rua = ""
+
     query_aluno = select(models.AlunoDB).where(models.AlunoDB.email == form.email)
     db_aluno = session.execute(query_aluno).scalar_one_or_none()
     if db_aluno:
@@ -61,7 +83,11 @@ def create_aluno(form: alunoSchema.NovoAluno):
         nome=form.nome,
         email=form.email,
         data_nascimento=form.data_nascimento,
-        data_cadastro=datetime.now()
+        data_cadastro=datetime.now(),
+        cep=cep_digits,
+        estado=estado,
+        cidade=cidade,
+        rua=rua
     )
     
     session.add(new_aluno)

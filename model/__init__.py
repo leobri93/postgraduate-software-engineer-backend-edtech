@@ -1,6 +1,6 @@
 from sqlalchemy_utils import database_exists, create_database
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 import os
 
 # importando os elementos definidos no modelo
@@ -28,3 +28,30 @@ if not database_exists(engine.url):
 
 # cria as tabelas do banco, caso não existam
 Base.metadata.create_all(engine)
+
+# --- Migração simples: adiciona colunas novas em 'alunos' se não existirem ---
+def _ensure_alunos_columns(engine):
+    try:
+        with engine.begin() as conn:
+            # obtém colunas atuais da tabela 'alunos'
+            result = conn.execute(text("PRAGMA table_info('alunos')"))
+            cols = [row[1] for row in result.fetchall()]
+
+            # colunas que adicionamos no modelo
+            to_add = []
+            if 'cep' not in cols:
+                to_add.append("cep TEXT")
+            if 'estado' not in cols:
+                to_add.append("estado TEXT")
+            if 'cidade' not in cols:
+                to_add.append("cidade TEXT")
+            if 'rua' not in cols:
+                to_add.append("rua TEXT")
+
+            for coldef in to_add:
+                conn.execute(text(f"ALTER TABLE alunos ADD COLUMN {coldef}"))
+    except Exception:
+        pass
+
+
+_ensure_alunos_columns(engine)

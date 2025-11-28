@@ -1,5 +1,6 @@
 from pydantic import BaseModel, EmailStr, Field
 from datetime import date, time, datetime
+from typing import Optional
 from model import models
 
 # --- Pydantic Schemas ---
@@ -12,6 +13,10 @@ class Aluno(BaseModel):
     email: EmailStr
     data_nascimento: date
     data_cadastro: datetime
+    cep: str
+    estado: Optional[str]
+    cidade: Optional[str]
+    rua: Optional[str]
 
 class NovoAluno(BaseModel):
     """Schema para criar um novo aluno.
@@ -19,6 +24,7 @@ class NovoAluno(BaseModel):
     nome: str = "João da Silva"
     email: EmailStr = "jsilva@gmail.com"
     data_nascimento: date = datetime(2000, 1, 1).date()
+    cep: str = "01001000"
 
 class AlunoBuscaSchema(BaseModel):
     """Schema para buscar um aluno.
@@ -49,7 +55,11 @@ def apresentar_aluno(aluno: models.AlunoDB) -> dict:
         "nome": aluno.nome,
         "email": aluno.email,
         "data_nascimento": aluno.data_nascimento,
-        "data_cadastro": aluno.data_cadastro
+        "data_cadastro": aluno.data_cadastro,
+        "cep": aluno.cep,
+        "estado": aluno.estado,
+        "cidade": aluno.cidade,
+        "rua": aluno.rua
     }
 
 def apresentar_aluno_listagem(alunos: list[models.AlunoDB]) -> dict:
@@ -62,7 +72,11 @@ def apresentar_aluno_listagem(alunos: list[models.AlunoDB]) -> dict:
             "nome": aluno.nome,
             "email": aluno.email,
             "data_nascimento": aluno.data_nascimento,
-            "data_cadastro": aluno.data_cadastro
+            "data_cadastro": aluno.data_cadastro,
+            "cep": aluno.cep,
+            "estado": aluno.estado,
+            "cidade": aluno.cidade,
+            "rua": aluno.rua
         })
 
     return {"alunos": result}
