@@ -4,4 +4,6 @@ flask-cors
 sqlalchemy
 sqlalchemy-utils
 pydantic
+pydantic[email]
 requests
+openapi3[swagger,redoc,rapidoc]

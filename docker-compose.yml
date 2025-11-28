@@ -4,6 +4,7 @@ services:
     build: .
     ports:
       - "8080:8080"
+    container_name: edtech-backend
     volumes:
       - ./database:/app/database
     environment:
