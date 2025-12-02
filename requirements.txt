@@ -6,4 +6,4 @@ sqlalchemy-utils
 pydantic
 pydantic[email]
 requests
-openapi3[swagger,redoc,rapidoc]
+flask-openapi3[swagger,redoc,rapidoc]
