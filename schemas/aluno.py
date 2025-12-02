@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from datetime import date, time, datetime
 from typing import Optional
 from model import models
@@ -25,6 +25,14 @@ class NovoAluno(BaseModel):
     email: EmailStr = "jsilva@gmail.com"
     data_nascimento: date = datetime(2000, 1, 1).date()
     cep: str = "01001000"
+
+    @field_validator("cep", mode="before")
+    def ensure_cep_is_str(cls, v):
+        """Garante que `cep` será sempre uma string mesmo quando enviado como número.
+        """
+        if v is None:
+            return v
+        return str(v)
 
 class AlunoBuscaSchema(BaseModel):
     """Schema para buscar um aluno.
