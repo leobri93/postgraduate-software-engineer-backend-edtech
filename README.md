@@ -35,12 +35,21 @@ venv\Scripts\activate     # Windows
 pip install -r requirements.txt
 ```
 
-### 4. Inicie o projeto
+### 4. Docker
+
+O arquivo docker ja encontra-se no projeto para criar o container basta rodar o comando:
 
 ```bash
-python .\app.py
+docker-compose up --build
 ```
 Abra o navegador e acesse http://localhost:8080 automaticamente será redirecionado para a rota /openapi com as documentações OpenAPI do projeto.
+
+---
+
+### 5. Fluxograma do projeto
+
+<img width="821" height="614" alt="image" src="https://github.com/user-attachments/assets/b093499d-0a7f-48f7-8265-5caf45dbcb98" />
+
 
 ## 💡 Observações
 
