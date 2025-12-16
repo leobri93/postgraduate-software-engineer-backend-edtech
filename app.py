@@ -143,52 +143,52 @@ def update_endereco(query: alunoSchema.AlunoBuscaSchema, form: alunoSchema.Atual
         abort(HTTPStatus.UNPROCESSABLE_ENTITY, description="Nenhum campo de endereço fornecido para atualizar.")
 
     # Atualiza CEP e, se necessário, busca dados na BrasilAPI
-    if form.cep is not '':
+    if form.cep != '':
         cep_digits = ''.join(filter(str.isdigit, str(form.cep)))
         if len(cep_digits) != 8:
             abort(HTTPStatus.UNPROCESSABLE_ENTITY, description="CEP inválido. Deve conter 8 dígitos.")
         aluno.cep = cep_digits
 
         # Busca dados de endereço quando algum dos campos estiver ausente
-        if form.estado is '' or form.cidade is '' or form.rua is '':
+        if form.estado == '' or form.cidade == '' or form.rua == '':
             try:
                 resp = requests.get(f"https://brasilapi.com.br/api/cep/v2/{cep_digits}", timeout=5)
                 if resp.status_code == 200:
                     data = resp.json()
-                    if form.estado is '':
+                    if form.estado == '':
                         aluno.estado = data.get('state')
                     else:
                         aluno.estado = form.estado
-                    if form.cidade is '':
+                    if form.cidade == '':
                         aluno.cidade = data.get('city')
                     else:
                         aluno.cidade = form.cidade
-                    if form.rua is '':
+                    if form.rua == '':
                         aluno.rua = data.get('street') or data.get('logradouro')
                     else:
                         aluno.rua = form.rua
                 else:
                     # Se a API não retornou com sucesso, usa os valores informados (se houver)
-                    if form.estado is not '':
+                    if form.estado != '':
                         aluno.estado = form.estado
-                    if form.cidade is not '':
+                    if form.cidade != '':
                         aluno.cidade = form.cidade
-                    if form.rua is not '':
+                    if form.rua != '':
                         aluno.rua = form.rua
             except requests.RequestException:
-                if form.estado is not '':
+                if form.estado != '':
                     aluno.estado = form.estado
-                if form.cidade is not '':
+                if form.cidade != '':
                     aluno.cidade = form.cidade
-                if form.rua is not '':
+                if form.rua != '':
                     aluno.rua = form.rua
     else:
         # Atualiza campos de endereço informados individualmente
-        if form.estado is not '':
+        if form.estado != '':
             aluno.estado = form.estado
-        if form.cidade is not '':
+        if form.cidade != '':
             aluno.cidade = form.cidade
-        if form.rua is not '':
+        if form.rua != '':
             aluno.rua = form.rua
 
     session.commit()
