@@ -88,3 +88,39 @@ def apresentar_aluno_listagem(alunos: list[models.AlunoDB]) -> dict:
         })
 
     return {"alunos": result}
+
+
+class Endereco(BaseModel):
+    """Schema para representar apenas os campos de endereço de um aluno."""
+    cep: str
+    estado: Optional[str]
+    cidade: Optional[str]
+    rua: Optional[str]
+
+
+class AtualizaEndereco(BaseModel):
+    """Schema para atualizar os campos de endereço de um aluno.
+
+    Todos os campos são opcionais; quando `cep` é informado, será validado e, se
+    necessário, consultada a BrasilAPI para preencher campos faltantes.
+    """
+    cep: Optional[str] = ""
+    estado: Optional[str] = ""
+    cidade: Optional[str] = ""
+    rua: Optional[str] = ""
+
+    @field_validator("cep", mode="before")
+    def ensure_cep_is_str(cls, v):
+        if v is None:
+            return v
+        return str(v)
+
+
+def apresentar_endereco(aluno: models.AlunoDB) -> dict:
+    """Apresenta apenas os campos de endereço de um aluno."""
+    return {
+        "cep": aluno.cep,
+        "estado": aluno.estado,
+        "cidade": aluno.cidade,
+        "rua": aluno.rua,
+    }

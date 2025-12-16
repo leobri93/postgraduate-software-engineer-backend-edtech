@@ -123,6 +123,77 @@ def list_alunos():
         return {"alunos": []}, 200
     return alunoSchema.apresentar_aluno_listagem(alunos), 200
 
+
+@app.put('/alunos/endereco', tags=[aluno_tag], responses={"200": alunoSchema.Endereco})
+def update_endereco(query: alunoSchema.AlunoBuscaSchema, form: alunoSchema.AtualizaEndereco):
+    """
+    Atualiza os campos de endereço (`cep`, `rua`, `cidade`, `estado`) de um aluno.
+    Retorna um schema contendo os campos de endereço atualizados.
+    """
+    session = Session()
+
+    query_aluno = select(models.AlunoDB).where(models.AlunoDB.id_aluno == query.id_aluno)
+    aluno = session.execute(query_aluno).scalar_one_or_none()
+
+    if not aluno:
+        abort(HTTPStatus.NOT_FOUND, description="Nenhum aluno encontrado para o ID fornecido.")
+
+    # Se nenhum campo foi informado, rejeita a requisição
+    if (form.cep is None and form.rua is None and form.cidade is None and form.estado is None):
+        abort(HTTPStatus.UNPROCESSABLE_ENTITY, description="Nenhum campo de endereço fornecido para atualizar.")
+
+    # Atualiza CEP e, se necessário, busca dados na BrasilAPI
+    if form.cep is not '':
+        cep_digits = ''.join(filter(str.isdigit, str(form.cep)))
+        if len(cep_digits) != 8:
+            abort(HTTPStatus.UNPROCESSABLE_ENTITY, description="CEP inválido. Deve conter 8 dígitos.")
+        aluno.cep = cep_digits
+
+        # Busca dados de endereço quando algum dos campos estiver ausente
+        if form.estado is '' or form.cidade is '' or form.rua is '':
+            try:
+                resp = requests.get(f"https://brasilapi.com.br/api/cep/v2/{cep_digits}", timeout=5)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    if form.estado is '':
+                        aluno.estado = data.get('state')
+                    else:
+                        aluno.estado = form.estado
+                    if form.cidade is '':
+                        aluno.cidade = data.get('city')
+                    else:
+                        aluno.cidade = form.cidade
+                    if form.rua is '':
+                        aluno.rua = data.get('street') or data.get('logradouro')
+                    else:
+                        aluno.rua = form.rua
+                else:
+                    # Se a API não retornou com sucesso, usa os valores informados (se houver)
+                    if form.estado is not '':
+                        aluno.estado = form.estado
+                    if form.cidade is not '':
+                        aluno.cidade = form.cidade
+                    if form.rua is not '':
+                        aluno.rua = form.rua
+            except requests.RequestException:
+                if form.estado is not '':
+                    aluno.estado = form.estado
+                if form.cidade is not '':
+                    aluno.cidade = form.cidade
+                if form.rua is not '':
+                    aluno.rua = form.rua
+    else:
+        # Atualiza campos de endereço informados individualmente
+        if form.estado is not '':
+            aluno.estado = form.estado
+        if form.cidade is not '':
+            aluno.cidade = form.cidade
+        if form.rua is not '':
+            aluno.rua = form.rua
+
+    session.commit()
+    return alunoSchema.apresentar_endereco(aluno), 200
+
 #Rota de atividade
 @app.post("/atividades", tags=[atividade_tag], responses={"200": atividadeSchema.Atividade})
 def create_atividade(query: alunoSchema.AlunoBuscaSchema):
