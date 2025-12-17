@@ -155,18 +155,9 @@ def update_endereco(query: alunoSchema.AlunoBuscaSchema, form: alunoSchema.Atual
                 resp = requests.get(f"https://brasilapi.com.br/api/cep/v2/{cep_digits}", timeout=5)
                 if resp.status_code == 200:
                     data = resp.json()
-                    if form.estado == '':
-                        aluno.estado = data.get('state')
-                    else:
-                        aluno.estado = form.estado
-                    if form.cidade == '':
-                        aluno.cidade = data.get('city')
-                    else:
-                        aluno.cidade = form.cidade
-                    if form.rua == '':
-                        aluno.rua = data.get('street') or data.get('logradouro')
-                    else:
-                        aluno.rua = form.rua
+                    aluno.estado = data.get('state')
+                    aluno.cidade = data.get('city')
+                    aluno.rua = data.get('street') or data.get('logradouro')
                 else:
                     # Se a API não retornou com sucesso, usa os valores informados (se houver)
                     if form.estado != '':
