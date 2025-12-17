@@ -48,7 +48,8 @@ Abra o navegador e acesse http://localhost:8080 automaticamente será redirecion
 
 ### 5. Fluxograma do projeto
 
-<img width="821" height="614" alt="image" src="https://github.com/user-attachments/assets/b093499d-0a7f-48f7-8265-5caf45dbcb98" />
+<img width="827" height="670" alt="image" src="https://github.com/user-attachments/assets/2e3522c2-96df-48d0-99b8-8d63e1602187" />
+
 
 
 ## 💡 Observações
